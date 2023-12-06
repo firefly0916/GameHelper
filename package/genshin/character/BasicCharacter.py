@@ -65,9 +65,8 @@ class People(object):
 
 if __name__ == "__main__":
     time.sleep(3)
-    peo = People("Neuvillette")
+    peo = People("Zhongli")
+    time.sleep(2)
     peo.move("w")
-    time.sleep(3)
+    time.sleep(18)
     peo.stop("w")
-    time.sleep(1)
-    peo.element_skill()
