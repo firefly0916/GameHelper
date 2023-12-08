@@ -22,14 +22,14 @@ logger_instance = SingletonLogger()
 
 class Raiden(People):
     def __init__(self):
-        name = "Raiden"
+        name = "raiden"
         super().__init__(name)
         self.cd_e = 10  # duration = 25
         self.cd_q = 18
         # self.img_dir = os.path.join(PROJECT_DIR, "package", "genshin", "img")
         # self.e_pic = os.path.join(self.img_dir, "Neuvillette_e.png")
 
-    def monitor(self, action_queue: queue.Queue):
+    def monitor(self, action_queue: queue.Queue, exit_flag: bool, is_start_cooldown: dict):
         """
         raiden monitor: 按照设定好的监控级别将行动传入队列
         :return:
@@ -41,12 +41,19 @@ class Raiden(People):
             keyboard.press_and_release("3")
             time.sleep(0.5)
             self.element_skill()
-            time.sleep(1)
+            return self.name
 
         while True:
-            action_queue.put(functools.partial(a))
-            logger_instance.logger.info("Adding raiden's element skill to queue")
-            time.sleep(23)
+            if not exit_flag:
+                logger_instance.logger.info("Adding raiden's element skill to queue")
+                while is_start_cooldown[self.name]:
+                    action_queue.put(functools.partial(a))
+                    is_start_cooldown[self.name] = False
+                    logger_instance.logger.info("start count down raiden's element skill")
+                    time.sleep(self.cd_e + 2)  # escape cd is long than gap time
+            else:
+                logger_instance.logger.info("Exiting raiden monitor")
+                sys.exit()
 
 
 if __name__ == "__main__":

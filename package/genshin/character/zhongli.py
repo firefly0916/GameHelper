@@ -19,14 +19,14 @@ logger_instance = SingletonLogger()
 
 class Zhongli(People):
     def __init__(self):
-        name = "Zhongli"
+        name = "zhongli"
         super().__init__(name)
         self.cd_e = 12  # duration = 20
         self.cd_q = 12
         # self.img_dir = os.path.join(PROJECT_DIR, "package", "genshin", "img")
         # self.e_pic = os.path.join(self.img_dir, "Neuvillette_e.png")
 
-    def monitor(self, action_queue: queue.Queue):
+    def monitor(self, action_queue: queue.Queue, exit_flag: bool, is_start_cooldown: dict):
         """
         zhongli monitor: 按照设定好的监控级别将行动传入队列
         :return:
@@ -38,13 +38,19 @@ class Zhongli(People):
             keyboard.press_and_release("1")
             time.sleep(1)
             self.super_element_skill()
-            time.sleep(1)
+            return self.name
 
         while True:
-            time.sleep(13)
-            action_queue.put(functools.partial(a))
-            logger_instance.logger.info("Adding zhongli's element skill to queue")
-
+            if not exit_flag:
+                logger_instance.logger.info("Adding zhongli's element skill to queue")
+                while is_start_cooldown[self.name]:
+                    action_queue.put(functools.partial(a))
+                    is_start_cooldown[self.name] = False
+                    logger_instance.logger.info("start count down zhongli's element skill")
+                    time.sleep(self.cd_e + 2)  # escape cd is long than gap time
+            else:
+                logger_instance.logger.info("Exiting zhongli monitor")
+                sys.exit()
 
     def super_element_skill(self):
         keyboard.press("e")

@@ -12,7 +12,7 @@ import pyautogui
 PROJECT_DIR = str(Path(__file__).resolve().parents[3])
 sys.path.append(PROJECT_DIR)
 
-from package.genshin.character import zhongli, nahida, raiden, furuina
+from package.genshin.character import zhongli, nahida, raiden, furina
 from package.logger import SingletonLogger
 
 logger_ins = SingletonLogger()
@@ -22,45 +22,46 @@ class God4(object):
 
     def __init__(self):
         self.act_queue = queue.Queue()
+        self.is_start_cooldown = {
+            "zhongli": True,
+            "nahida": True,
+            "raiden": True,
+            "furina": True
+        }
+        self.exit_flag = False
 
         # 创建并启动主脑行动线程
         def a():
-            time.sleep(1)
             logger_ins.logger.info("Start domain")
-            pyautogui.leftClick()
-            time.sleep(1)
-            keyboard.press("w")
-            time.sleep(18)
-            keyboard.release("w")
-            time.sleep(0.5)
             keyboard.press_and_release("f")
-            time.sleep(1)
-            keyboard.press("e")
-            time.sleep(1)
-            keyboard.release("e")
+            self.zhongli_thread.start()
             self.nahida_thread.start()
             self.raiden_thread.start()
             self.furina_thread.start()
-            self.zhongli_thread.start()
-            time.sleep(0.5)
 
         self.act_queue.put(functools.partial(a))
+
+        # creat all threads
         self.main_head_thread = threading.Thread(target=self.main_head, daemon=True)
         self.main_head_thread.start()
         logger_ins.logger.info("Creat main head Ok")
 
         # 创建任务对象
         zhongli_ = zhongli.Zhongli()
-        self.zhongli_thread = threading.Thread(target=zhongli_.monitor, args=(self.act_queue,), daemon=True)
+        self.zhongli_thread = threading.Thread(target=zhongli_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+                                               daemon=True)
         logger_ins.logger.info(f"Creat zhongli Ok")
         nahida_ = nahida.Nahida()
-        self.nahida_thread = threading.Thread(target=nahida_.monitor, args=(self.act_queue,), daemon=True)
+        self.nahida_thread = threading.Thread(target=nahida_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+                                              daemon=True)
         logger_ins.logger.info(f"Creat nahida Ok")
         raiden_ = raiden.Raiden()
-        self.raiden_thread = threading.Thread(target=raiden_.monitor, args=(self.act_queue,), daemon=True)
+        self.raiden_thread = threading.Thread(target=raiden_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+                                              daemon=True)
         logger_ins.logger.info(f"Creat raiden Ok")
-        furina_ = furuina.Furina()
-        self.furina_thread = threading.Thread(target=furina_.monitor, args=(self.act_queue,), daemon=True)
+        furina_ = furina.Furina()
+        self.furina_thread = threading.Thread(target=furina_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+                                              daemon=True)
         logger_ins.logger.info(f"Creat furina Ok")
 
         # 创建并启动热键监听线程
@@ -69,46 +70,46 @@ class God4(object):
         logger_ins.logger.info("Create hotkey listener Ok")
 
     def main_head(self):
-        start_time = time.time()
-        exit_flag = False
         logger_ins.logger.info("Start listening action queue")
-        while not exit_flag:
+        while not self.exit_flag:
             try:
                 # 从队列中取出可执行函数，非阻塞方式
                 executable_function = self.act_queue.get()
-
                 # 执行函数
                 logger_ins.logger.info("Find a action!")
-                executable_function()
-
+                name = executable_function()
+                if name == "zhongli":
+                    self.is_start_cooldown["zhongli"] = True  # Permit count sown cooldown
+                elif name == "nahida":
+                    self.is_start_cooldown["nahida"] = True  # Permit count sown cooldown
+                elif name == "raiden":
+                    self.is_start_cooldown["raiden"] = True  # Permit count sown cooldown
+                elif name == "raiden":
+                    self.is_start_cooldown["raiden"] = True  # Permit count sown cooldown
                 # 通知队列任务已经处理完毕
                 self.act_queue.task_done()
-
-                # 重置计时器
-                start_time = time.time()
-
             except queue.Empty:
-                # 如果队列为空，检查是否超过一分钟
-                if time.time() - start_time > 30:
-                    # 如果一分钟内没有任务，打印日志并退出循环
-                    logger_ins.logger.info("No actions detected for 1 minute. Exiting main_head loop.")
-                    exit_flag = True  # 设置标志通知循环退出
-                    break
-
-                # 如果队列为空，休眠一小段时间再继续检查
-                time.sleep(1)
+                logger_ins.logger.info("Empty action queue")
+                raise Exception("Empty action queue")
+            except AttributeError:
+                logger_ins.logger.info("Finish listening action queue, now exiting main_head loop.")
+                sys.exit("Exiting main_head")
 
         # 如果循环退出，执行其他清理操作
         logger_ins.logger.info("Main_head loop exited.")
-        exit(0)
+        sys.exit()
 
     def hotkey_listener(self):
         # 热键监听的逻辑
-        keyboard.add_hotkey('ctrl+esc', self.exit_program)
+        keyboard.add_hotkey('ctrl', self.exit_program)
         keyboard.wait('esc')
 
     def exit_program(self):
         # 退出程序的逻辑
+        self.exit_flag = True
+        del self.act_queue
+        del self.is_start_cooldown
+        del self.exit_flag
         logger_ins.logger.info("Exiting program...")
         # 强制退出程序
         sys.exit()
@@ -129,6 +130,6 @@ class God4(object):
 
 
 if __name__ == "__main__":
-    party = God4()
     time.sleep(2)
+    party = God4()
     party.wait_for_threads()

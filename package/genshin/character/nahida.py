@@ -22,14 +22,14 @@ logger_instance = SingletonLogger()
 
 class Nahida(People):
     def __init__(self):
-        name = "Nahida"
+        name = "nahida"
         super().__init__(name)
         self.cd_e = 6  # duration = 20
         self.cd_q = 13.5
         # self.img_dir = os.path.join(PROJECT_DIR, "package", "genshin", "img")
         # self.e_pic = os.path.join(self.img_dir, "Neuvillette_e.png")
 
-    def monitor(self, action_queue: queue.Queue):
+    def monitor(self, action_queue: queue.Queue, exit_flag: bool, is_start_cooldown: dict):
         """
         nahida monitor: 按照设定好的监控级别将行动传入队列
         :return:
@@ -41,12 +41,19 @@ class Nahida(People):
             keyboard.press_and_release("2")
             time.sleep(0.5)
             self.super_element_skill()
-            time.sleep(1)
+            return self.name
 
         while True:
-            action_queue.put(functools.partial(a))
-            logger_instance.logger.info("Adding nahida's element skill to queue")
-            time.sleep(16)
+            if not exit_flag:
+                logger_instance.logger.info("Adding nahida's element skill to queue")
+                while is_start_cooldown[self.name]:
+                    action_queue.put(functools.partial(a))
+                    is_start_cooldown[self.name] = False
+                    logger_instance.logger.info("start count down nahida's element skill")
+                    time.sleep(self.cd_e + 2)  # escape cd is long than gap time
+            else:
+                logger_instance.logger.info("Exiting nahida's monitor")
+                sys.exit()
 
     def super_element_skill(self):
         time.sleep(0.5)
@@ -54,7 +61,7 @@ class Nahida(People):
         time.sleep(0.5)
         for i in range(12):
             win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 310, 0, 0, 0)
-            time.sleep(0.15)
+            time.sleep(0.02)
         keyboard.release("e")
         logger_instance.logger.info(f"{self.name} releases super element skill")
 
