@@ -45,9 +45,9 @@ class Furina(People):
 
         while True:
             if not exit_flag:
-                logger_instance.logger.info("Adding furina's element skill to queue")
                 while is_start_cooldown[self.name]:
                     action_queue.put(functools.partial(a))
+                    logger_instance.logger.info("Adding furina's element skill to queue")
                     is_start_cooldown[self.name] = False
                     logger_instance.logger.info("start count down furina's element skill")
                     time.sleep(self.cd_e + 2)  # escape cd is long than gap time

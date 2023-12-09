@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
 
+import pyautogui
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 sys.path.append(str(Path(__file__).resolve().parents[2]))
-
 import time
 import numpy as np
 import win32api

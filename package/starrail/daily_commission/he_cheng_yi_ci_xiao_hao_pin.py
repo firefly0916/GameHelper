@@ -1,0 +1,64 @@
+import os.path
+import sys
+from pathlib import Path
+
+import pyautogui
+
+PROJECT_DIR = str(Path(__file__).resolve().parents[3])
+sys.path.append(PROJECT_DIR)
+import time
+import cv2
+import keyboard
+
+from package.image_utils.compare import ImageCompare
+from package.image_utils.screen_shoot import ScreenShoot
+from package.mouse_operation.mouse_click import MouseClick
+from package.mouse_operation.mouse_move import MouseMove
+from package.logger import SingletonLogger
+
+logger_ins = SingletonLogger()
+
+
+class HeChengYiCiXiaoHaoPin(object):
+    def __init__(self):
+        self.commission_path = os.path.join(PROJECT_DIR, "package", "starrail", "image", "he_cheng_yi_ci_xiao_hao_pin.png")
+        self.button_he_cheng = os.path.join(PROJECT_DIR, "package", "starrail", "image", "button_he_cheng.png")
+        self.button_confirm = os.path.join(PROJECT_DIR, "package", "starrail", "image", "button_confirm.png")
+
+    def run(self):
+        # TODO: Check integrate
+
+        logger_ins.logger.info("Get commission picture...")
+        commission = cv2.imread(self.commission_path)
+
+        logger_ins.logger.info("Checking matched picture")
+        top_left, bottom_right = ImageCompare.circle_check(commission)
+
+        logger_ins.logger.info("Calculating center")
+        center = ((top_left[0] + bottom_right[0]) // 2, (top_left[1] + bottom_right[1]) // 2)
+        pyautogui.leftClick(center[0], center[1] + 170)
+        time.sleep(1)
+        logger_ins.logger.info("Get button_he_cheng picture...")
+        button_he_cheng = cv2.imread(self.button_he_cheng)
+        logger_ins.logger.info("Checking matched picture...")
+        if ImageCompare.circle_check(button_he_cheng):
+            screen_image = ScreenShoot().get_screen_shoot()
+            MouseClick.left_click_matched_image(screen_image, button_he_cheng)  # TODO: 可以用pyautogui代替
+
+        logger_ins.logger.info("Get button_confirm picture...")
+        button_confirm = cv2.imread(self.button_confirm)
+        logger_ins.logger.info("Checking confirm button...")
+        if ImageCompare.circle_check(button_confirm):
+            screen_image = ScreenShoot().get_screen_shoot()
+            MouseClick.left_click_matched_image(screen_image, button_confirm)
+
+        time.sleep(1.5)
+        pyautogui.leftClick()
+        time.sleep(2)
+        keyboard.press_and_release("esc")
+        time.sleep(1)
+        logger_ins.logger.info("Finish this daily commission successfully!")
+
+
+if __name__ == "__main__":
+    pass

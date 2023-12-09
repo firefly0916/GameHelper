@@ -1,4 +1,6 @@
 import functools
+import inspect
+import os.path
 import queue
 import sys
 import threading
@@ -8,6 +10,7 @@ from pathlib import Path
 
 import keyboard
 import pyautogui
+import pygame
 
 PROJECT_DIR = str(Path(__file__).resolve().parents[3])
 sys.path.append(PROJECT_DIR)
@@ -21,6 +24,12 @@ logger_ins = SingletonLogger()
 class God4(object):
 
     def __init__(self):
+        self.finish_thread: threading.Thread
+        self.furina_thread: threading.Thread
+        self.raiden_thread: threading.Thread
+        self.nahida_thread: threading.Thread
+        self.zhongli_thread: threading.Thread
+        self.main_head_thread: threading.Thread
         self.act_queue = queue.Queue()
         self.is_start_cooldown = {
             "zhongli": True,
@@ -29,45 +38,54 @@ class God4(object):
             "furina": True
         }
         self.exit_flag = False
+        self._create_threads()
+
+    def _create_threads(self):
 
         # 创建并启动主脑行动线程
         def a():
             logger_ins.logger.info("Start domain")
             keyboard.press_and_release("f")
-            self.zhongli_thread.start()
-            self.nahida_thread.start()
-            self.raiden_thread.start()
-            self.furina_thread.start()
 
         self.act_queue.put(functools.partial(a))
 
         # creat all threads
         self.main_head_thread = threading.Thread(target=self.main_head, daemon=True)
-        self.main_head_thread.start()
         logger_ins.logger.info("Creat main head Ok")
 
         # 创建任务对象
         zhongli_ = zhongli.Zhongli()
-        self.zhongli_thread = threading.Thread(target=zhongli_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+        self.zhongli_thread = threading.Thread(target=zhongli_.monitor,
+                                               args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
                                                daemon=True)
         logger_ins.logger.info(f"Creat zhongli Ok")
         nahida_ = nahida.Nahida()
-        self.nahida_thread = threading.Thread(target=nahida_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+        self.nahida_thread = threading.Thread(target=nahida_.monitor,
+                                              args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
                                               daemon=True)
         logger_ins.logger.info(f"Creat nahida Ok")
         raiden_ = raiden.Raiden()
-        self.raiden_thread = threading.Thread(target=raiden_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+        self.raiden_thread = threading.Thread(target=raiden_.monitor,
+                                              args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
                                               daemon=True)
         logger_ins.logger.info(f"Creat raiden Ok")
         furina_ = furina.Furina()
-        self.furina_thread = threading.Thread(target=furina_.monitor, args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
+        self.furina_thread = threading.Thread(target=furina_.monitor,
+                                              args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
                                               daemon=True)
         logger_ins.logger.info(f"Creat furina Ok")
 
-        # 创建并启动热键监听线程
-        self.hotkey_thread = threading.Thread(target=self.hotkey_listener, daemon=True)
-        self.hotkey_thread.start()
-        logger_ins.logger.info("Create hotkey listener Ok")
+        # 创建finish monitor
+        self.finish_thread = threading.Thread(target=self.challenge_finish_monitor, daemon=True)
+        logger_ins.logger.info("Create finish monitor listener Ok")
+
+    def start(self):
+        self.main_head_thread.start()
+        self.zhongli_thread.start()
+        self.nahida_thread.start()
+        self.raiden_thread.start()
+        self.furina_thread.start()
+        self.finish_thread.start()
 
     def main_head(self):
         logger_ins.logger.info("Start listening action queue")
@@ -84,8 +102,8 @@ class God4(object):
                     self.is_start_cooldown["nahida"] = True  # Permit count sown cooldown
                 elif name == "raiden":
                     self.is_start_cooldown["raiden"] = True  # Permit count sown cooldown
-                elif name == "raiden":
-                    self.is_start_cooldown["raiden"] = True  # Permit count sown cooldown
+                elif name == "furina":
+                    self.is_start_cooldown["furina"] = True  # Permit count sown cooldown
                 # 通知队列任务已经处理完毕
                 self.act_queue.task_done()
             except queue.Empty:
@@ -97,21 +115,6 @@ class God4(object):
 
         # 如果循环退出，执行其他清理操作
         logger_ins.logger.info("Main_head loop exited.")
-        sys.exit()
-
-    def hotkey_listener(self):
-        # 热键监听的逻辑
-        keyboard.add_hotkey('ctrl', self.exit_program)
-        keyboard.wait('esc')
-
-    def exit_program(self):
-        # 退出程序的逻辑
-        self.exit_flag = True
-        del self.act_queue
-        del self.is_start_cooldown
-        del self.exit_flag
-        logger_ins.logger.info("Exiting program...")
-        # 强制退出程序
         sys.exit()
 
     def wait_for_threads(self):
@@ -128,8 +131,39 @@ class God4(object):
             # 在这里执行其他退出操作，例如关闭资源、清理等
             sys.exit()
 
+    def challenge_finish_monitor(self):
+        challenge_finish_path = os.path.join(PROJECT_DIR, "package", "genshin", "img", "challenge_finish_bin.png")
+        current_function_name = inspect.currentframe().f_code.co_name
+        while True:
+            try:
+                box = pyautogui.locateOnScreen(challenge_finish_path, grayscale=True, confidence=0.5)
+                logger_ins.logger.info(f"Box:{box}")
+                try:
+                    pygame.init()
+                    pygame.mixer.init()
+                    sound = pygame.mixer.Sound("D:\\git\\GameHelper\\package\\genshin\\audio\\challenging_finished.wav")
+                    sound.play()
+                    pygame.time.wait(int(sound.get_length() * 1000))  # 等待音频播放完毕
+                except pygame.error as e:
+                    print(f"Error playing sound: {e}")
+                self.exit_program()
+                break
+            except pyautogui.ImageNotFoundException:
+                logger_ins.logger.info(f"[{current_function_name}] No image found")
+                time.sleep(0.5)
+
+    def exit_program(self):
+        # 退出程序的逻辑
+        self.exit_flag = True
+        del self.act_queue
+        del self.is_start_cooldown
+        logger_ins.logger.info("Exiting program...")
+        # 强制退出程序
+        sys.exit()
+
 
 if __name__ == "__main__":
     time.sleep(2)
     party = God4()
+    party.start()
     party.wait_for_threads()

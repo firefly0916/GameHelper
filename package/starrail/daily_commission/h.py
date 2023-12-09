@@ -2,6 +2,7 @@ import time
 
 from he_cheng_yi_ci_cai_liao import HeChengYiCiCaiLiao
 from go_assignment import GoAssignment
+from he_cheng_yi_ci_xiao_hao_pin import HeChengYiCiXiaoHaoPin
 
 
 class DailyCommission(object):
@@ -14,6 +15,11 @@ class DailyCommission(object):
         commission.run()
 
     @staticmethod
+    def he_cheng_yi_ci_xiao_hao_pin():
+        commission = HeChengYiCiXiaoHaoPin()
+        commission.run()
+
+    @staticmethod
     def go_assignment():
         commission = GoAssignment()
         commission.run()
@@ -22,4 +28,4 @@ class DailyCommission(object):
 if __name__ == "__main__":
     dailyCommission = DailyCommission()
     time.sleep(1)
-    dailyCommission.go_assignment()
+    dailyCommission.he_cheng_yi_ci_xiao_hao_pin()
