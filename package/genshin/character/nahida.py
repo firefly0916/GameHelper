@@ -41,6 +41,8 @@ class Nahida(People):
             keyboard.press_and_release("2")
             time.sleep(0.5)
             self.super_element_skill()
+            time.sleep(0.5)
+            self.element_burst()
             return self.name
 
         while True:
