@@ -38,6 +38,8 @@ class Zhongli(People):
             keyboard.press_and_release("1")
             time.sleep(1)
             self.super_element_skill()
+            time.sleep(0.5)
+            self.element_burst()
             return self.name
 
         while True:

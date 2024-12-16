@@ -15,7 +15,7 @@ import pygame
 PROJECT_DIR = str(Path(__file__).resolve().parents[3])
 sys.path.append(PROJECT_DIR)
 
-from package.genshin.character import zhongli, nahida, raiden, furina
+from package.genshin.character import zhongli, nahida, raiden, furina, hp_monitor
 from package.logger import SingletonLogger
 
 logger_ins = SingletonLogger()
@@ -29,6 +29,7 @@ class God4(object):
         self.raiden_thread: threading.Thread
         self.nahida_thread: threading.Thread
         self.zhongli_thread: threading.Thread
+        self.hp_monitor_thread: threading.Thread
         self.main_head_thread: threading.Thread
         self.act_queue = queue.Queue()
         self.is_start_cooldown = {
@@ -74,6 +75,9 @@ class God4(object):
                                               args=(self.act_queue, self.exit_flag, self.is_start_cooldown),
                                               daemon=True)
         logger_ins.logger.info(f"Creat furina Ok")
+        hp_ = hp_monitor.HPMonitor()
+        self.hp_thread = threading.Thread(target=hp_.monitor, daemon=True)
+        logger_ins.logger.info(f"Creat hp monitor Ok")
 
         # 创建finish monitor
         self.finish_thread = threading.Thread(target=self.challenge_finish_monitor, daemon=True)
@@ -85,6 +89,7 @@ class God4(object):
         self.nahida_thread.start()
         self.raiden_thread.start()
         self.furina_thread.start()
+        self.hp_thread.start()
         self.finish_thread.start()
 
     def main_head(self):
@@ -111,11 +116,14 @@ class God4(object):
                 raise Exception("Empty action queue")
             except AttributeError:
                 logger_ins.logger.info("Finish listening action queue, now exiting main_head loop.")
-                sys.exit("Exiting main_head")
 
         # 如果循环退出，执行其他清理操作
         logger_ins.logger.info("Main_head loop exited.")
-        sys.exit()
+        del self.hp_thread
+        del self.zhongli_thread
+        del self.nahida_thread
+        del self.raiden_thread
+        del self.furina_thread
 
     def wait_for_threads(self):
         # 等待所有线程结束
@@ -124,24 +132,23 @@ class God4(object):
         # 检查 main_head_thread 是否存活
         if self.main_head_thread.is_alive():
             # 如果线程仍然存活，说明 join 超时，可能需要执行一些额外的操作
-            print("main_head_thread is still alive. Additional actions can be performed.")
+            logger_ins.logger.info("main_head_thread is still alive. Additional actions can be performed.")
         else:
             # 如果线程已经结束，可以在这里执行退出操作
-            print("main_head_thread has exited. Exiting the program.")
+            logger_ins.logger.info("main_head_thread has exited. Exiting the program.")
             # 在这里执行其他退出操作，例如关闭资源、清理等
-            sys.exit()
 
     def challenge_finish_monitor(self):
         challenge_finish_path = os.path.join(PROJECT_DIR, "package", "genshin", "img", "challenge_finish_bin.png")
         current_function_name = inspect.currentframe().f_code.co_name
         while True:
             try:
-                box = pyautogui.locateOnScreen(challenge_finish_path, grayscale=True, confidence=0.5)
+                box = pyautogui.locateOnScreen(challenge_finish_path, grayscale=False, confidence=0.4)
                 logger_ins.logger.info(f"Box:{box}")
                 try:
                     pygame.init()
                     pygame.mixer.init()
-                    sound = pygame.mixer.Sound("D:\\git\\GameHelper\\package\\genshin\\audio\\challenging_finished.wav")
+                    sound = pygame.mixer.Sound(os.path.join(PROJECT_DIR, "package", "genshin", "audio", "challenging_finished.wav"))
                     sound.play()
                     pygame.time.wait(int(sound.get_length() * 1000))  # 等待音频播放完毕
                 except pygame.error as e:
@@ -159,7 +166,6 @@ class God4(object):
         del self.is_start_cooldown
         logger_ins.logger.info("Exiting program...")
         # 强制退出程序
-        sys.exit()
 
 
 if __name__ == "__main__":
@@ -167,3 +173,4 @@ if __name__ == "__main__":
     party = God4()
     party.start()
     party.wait_for_threads()
+    print("I can do other actions")

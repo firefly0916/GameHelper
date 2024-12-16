@@ -51,4 +51,6 @@ class MouseMove(object):
 if __name__ == "__main__":
     main = MouseMove()
     time.sleep(2)
-    main.left(200)
+    main.left(2000)
+    main.to(1721, 1014)
+
